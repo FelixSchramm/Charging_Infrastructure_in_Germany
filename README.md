@@ -24,6 +24,7 @@ This project utilizes three main datasets:
 ## Project Structure
 
 The project follows a clear and professional folder structure for organization and reproducibility:
+
 ├── 01_app/
 │   └── dashboard.py               # The main Streamlit script
 ├── 02_data/
@@ -33,7 +34,7 @@ The project follows a clear and professional folder structure for organization a
 │   └── 02_meta_data/              # Folder for geospatial data and other metadata
 │       └── ...                    # Contains the VG250_KRS Shapefile
 ├── 03_notebooks/                  # Optional: For initial data analysis and prototyping
-├── 04_documents/                  # Optional: For project documentation or reports
+├── 04_documents/                  # Optional: For documentation or reports
 ├── .gitignore                     # Git configuration to ignore unwanted files
 ├── README.md                      # This file
 ├── requirements.txt               # List of all Python dependencies
