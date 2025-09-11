@@ -68,7 +68,7 @@ if df is not None:
 
 
 
-    # --- DATENFILTERUNG (angepasst für Textsuche) ---
+    # --- DATENFILTERUNG  ---
     df_filtered = df[
         (df['Bundesland'].isin(selected_bundeslaender)) &
         (df['Jahr'] >= selected_jahre[0]) &
@@ -150,7 +150,7 @@ if df is not None:
         st.plotly_chart(fig_betreiber, use_container_width=True)
 
         # --- START: ABSCHNITT LIMITATIONEN ---
-# Diesen gesamten Block kannst du an das Ende deines bestehenden Python-Skripts kopieren.
+
 
 st.divider()
 st.header("Limitationen")
