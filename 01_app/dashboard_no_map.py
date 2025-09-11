@@ -164,7 +164,7 @@ Dieses Dashboard bietet einen umfassenden Überblick über den **Bestand** der �
 
 - **Fehlende geografische Analyse:** Das Dashboard enthält keine interaktive Karte, wodurch "weiße Flecken" und regionale Ungleichgewichte nicht visuell analysiert werden können. Dies ließe sich durch Geodaten vom nationalen Open-Data-Portal [GovData.de](https://www.govdata.de/) beheben.
                         
-- **Zuverlässigkeit und Nutzererfahrung:** Gezählt werden alle registrierten Ladepunkte, unabhängig von ihrem Betriebszustand. Die tatsächliche Ausfallrate aus Nutzersicht (ca. 8 % bis 10 % laut einer Analyse) ist ein entscheidender Qualitätsfaktor, der hier unberücksichtigt bleibt. Diese Diskrepanz zur offiziellen "Uptime" entsteht z.B. durch Softwarefehler oder defekte QR-Codes.
+- **Zuverlässigkeit und Nutzererfahrung:** Gezählt werden alle registrierten Ladepunkte, unabhängig von ihrem Betriebszustand. Die tatsächliche Ausfallrate aus Nutzersicht ist ein entscheidender Qualitätsfaktor, der hier unberücksichtigt bleibt. Diese Diskrepanz zur offiziellen "Uptime" entsteht z.B. durch Softwarefehler oder defekte QR-Codes.
 
 - **Ökonomischer Kontext:** Faktoren wie der komplexe "Tarifdschungel", der durch über 8.000 Betreiber entsteht, Preismodelle und die allgemeine Wirtschaftlichkeit der Standorte werden nicht analysiert. Diese beeinflussen jedoch die Marktdynamik und den weiteren Ausbau maßgeblich.
 """)
