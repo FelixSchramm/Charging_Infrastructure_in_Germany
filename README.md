@@ -24,7 +24,7 @@ This project utilizes three main datasets:
 ## Project Structure
 
 The project follows a clear and professional folder structure for organization and reproducibility:
-
+```
 ├── 01_app/
 │   └── dashboard.py               # The main Streamlit script
 ├── 02_data/
@@ -40,7 +40,7 @@ The project follows a clear and professional folder structure for organization a
 ├── requirements.txt               # List of all Python dependencies
 └── .streamlit/
 └── config.toml                # Streamlit configuration for app layout
-
+```
 
 ## How to Run the Project
 
