@@ -4,8 +4,7 @@ import plotly.express as px
 
 # --- SEITENKONFIGURATION & FARBPALETTE ---
 st.set_page_config(
-    page_title="Dashboard Ladeinfrastruktur | NOW GmbH",
-    page_icon="⚡",
+    page_title="Ladeinfrastruktur in Deutschland| NOW GmbH",
     layout="wide"
 )
 
@@ -89,7 +88,7 @@ if df is not None:
 
 
     # --- HAUPTSEITE (Rest des Codes bleibt gleich) ---
-    st.title("⚡ Dashboard Ladeinfrastruktur Deutschland")
+    st.title("Stand der Ladeinfrastruktur in Deutschland")
     st.markdown("Eine interaktive Analyse für die **NOW GmbH**.")
 
     # KPIs
@@ -102,8 +101,8 @@ if df is not None:
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Anzahl Ladestationen", f"{num_ladestationen:,}".replace(',', '.'))
     col2.metric("Anzahl Ladepunkte", f"{num_ladepunkte:,}".replace(',', '.'))
-    col3.metric("Leistung nach Ladepunkt", f"{leistung_ladepunkt_gw:.2f} GW")
-    col4.metric("Leistung nach Ladesäule", f"{leistung_station_gw:.2f} GW")
+    col3.metric("Leistung nach Ladestationen", f"{leistung_station_gw:.2f} GW")
+    col4.metric("Leistung nach Ladepunkten", f"{leistung_ladepunkt_gw:.2f} GW")
     st.divider()
 
     # Zeitreihen
@@ -149,3 +148,25 @@ if df is not None:
         fig_betreiber = px.bar(top_10_betreiber, x='count', y='BetreiberBereinigt', orientation='h', title='<b>Top 10 Betreiber</b>', labels={'count': 'Anzahl Ladepunkte', 'BetreiberBereinigt': 'Betreiber'}, color_discrete_sequence=[NOW_GRUEN])
         fig_betreiber.update_layout(yaxis={'categoryorder':'total ascending'})
         st.plotly_chart(fig_betreiber, use_container_width=True)
+
+        # --- START: ABSCHNITT LIMITATIONEN ---
+# Diesen gesamten Block kannst du an das Ende deines bestehenden Python-Skripts kopieren.
+
+st.divider()
+st.header("Limitationen")
+
+st.markdown("""
+Dieses Dashboard bietet einen umfassenden Überblick über den **Bestand** der öffentlichen Ladeinfrastruktur in Deutschland. Für eine vollständige Bewertung des Marktes müssen jedoch qualitative und ökonomische Faktoren berücksichtigt werden, die über eine reine Bestandszählung und historische Entwicklung hinausgehen.
+
+- **Auslastungsgrad:** Das Dashboard erfasst den Bestand, aber nicht die tatsächliche Nutzung der Ladeinfrastruktur. Geringe Auslastung ist für einige Standorte eine zentrale Herausforderung, die hier nicht abgebildet wird. Das kann mit Metriken wie **durchschnittliche Ladevorgänge pro Ladepunkt und Tag**  oder **durchschnittlich verladene Energiemenge pro Ladepunkt und Tag** ergänzt werden.
+
+- **Verhältnis von Ladepunkten zu E-Fahrzeugen:** Die reine Anzahl an Ladepunkten pro Region ist nur bedingt aussagekräftig. Eine entscheidende Kennzahl ist das Verhältnis zum lokalen E-Fahrzeugbestand, um die tatsächliche Versorgungsdichte zu bewerten. Deutschlandweit teilen sich etwa zehn E-Autos einen öffentlichen Ladepunkt.
+
+- **Fehlende geografische Analyse:** Das Dashboard enthält keine interaktive Karte, wodurch "weiße Flecken" und regionale Ungleichgewichte nicht visuell analysiert werden können. Dies ließe sich durch Geodaten vom nationalen Open-Data-Portal [GovData.de](https://www.govdata.de/) beheben.
+                        
+- **Zuverlässigkeit und Nutzererfahrung:** Gezählt werden alle registrierten Ladepunkte, unabhängig von ihrem Betriebszustand. Die tatsächliche Ausfallrate aus Nutzersicht (ca. 8 % bis 10 % laut einer Analyse) ist ein entscheidender Qualitätsfaktor, der hier unberücksichtigt bleibt. Diese Diskrepanz zur offiziellen "Uptime" entsteht z.B. durch Softwarefehler oder defekte QR-Codes.
+
+- **Ökonomischer Kontext:** Faktoren wie der komplexe "Tarifdschungel", der durch über 8.000 Betreiber entsteht, Preismodelle und die allgemeine Wirtschaftlichkeit der Standorte werden nicht analysiert. Diese beeinflussen jedoch die Marktdynamik und den weiteren Ausbau maßgeblich.
+""")
+
+# --- ENDE: ABSCHNITT LIMITATIONEN ---
