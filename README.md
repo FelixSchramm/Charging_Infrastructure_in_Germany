@@ -25,7 +25,7 @@ This project utilizes three main datasets:
 
 The project follows a clear and professional folder structure for organization and reproducibility:
 
-├── 01_app/
+"├── 01_app/
 │   └── dashboard.py               # The main Streamlit script
 ├── 02_data/
 │   ├── 01_original_data/          # CSV files from the charging station register
@@ -40,7 +40,7 @@ The project follows a clear and professional folder structure for organization a
 ├── requirements.txt               # List of all Python dependencies
 └── .streamlit/
 └── config.toml                # Streamlit configuration for app layout
-
+"
 ## How to Run the Project
 
 To run the dashboard locally, follow these steps:
