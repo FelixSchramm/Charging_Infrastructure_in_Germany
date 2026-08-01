@@ -20,7 +20,7 @@ Es gibt zwei Wege, an die BNetzA-Ladesäulendaten zu kommen:
 | Aktualität | monatlich | täglich |
 | Beschaffung | HTML der Downloadseite nach dem XLSX-Link durchsuchen (Scraping) | fester, dokumentierter Endpunkt |
 | Form der Rohdaten | flache Tabelle mit breiten Spalten | verschachtelter Baum |
-| Status | produktiv (Workflow `update_data.yml`) | noch nicht verdrahtet, siehe Issue #15 |
+| Status | produktiv (Workflow `update_data.yml`) | produktiv (Workflow `update_data_api.yml`) |
 
 Beide schreiben **dasselbe Zielschema an dieselben Pfade**
 (`02_data/03_computed_data/combined_ladestation_ladepunkt.parquet` und
@@ -475,8 +475,12 @@ Zwei Details, die dazugehören:
 
 ## 7. Bekannte Grenzen
 
-- **Noch kein Workflow.** Das Skript ist nirgends verdrahtet, Issue #15. Bis
-  dahin bleibt `update_data.py` die produktive Pipeline.
+- **Roter Lauf, wenn der Export fehlt.** `update_data_api.yml` läuft täglich um
+  07:20 UTC. Hat die BNetzA den Export des Tages noch nicht bereitgestellt,
+  endet der Lauf mit HTTP 404 und Exit-Code 1 — also mit einem fehlgeschlagenen
+  Workflow, obwohl nichts kaputt ist. Bewusst so gelassen, bis über ein paar
+  Läufe klar ist, wie oft das vorkommt. `update_data.py` bleibt als monatlicher
+  Fallback bestehen.
 - **`status.operational` wird nicht ausgewertet.** Die API kennt einen
   Betriebsstatus, die XLSX-Quelle nicht. Bewusst nicht gemappt, um keine
   stillschweigende Verhaltensänderung im Dashboard einzuführen.

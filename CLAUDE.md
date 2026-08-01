@@ -27,7 +27,7 @@ uv run streamlit run 01_app/app.py
 - `scripts/update_data.py` — downloads BNetzA xlsx, writes the parquet. Shared
   helpers (`add_ags`, `save_output`, paths) are imported by the script below.
 - `scripts/update_data_official.py` — alternative source: BNetzA's official daily
-  JSON API, same output schema. Not wired into a workflow yet (Issue #15).
+  JSON API, same output schema. Run daily by `update_data_api.yml`.
   Explained in `scripts/update_data_official.md`.
 - `scripts/update_kba_data.py` — updates the KBA EV-stock parquet.
 - `02_data/03_computed_data/combined_ladestation_ladepunkt.parquet` — main data (~7 MB).
@@ -35,8 +35,10 @@ uv run streamlit run 01_app/app.py
 - `02_data/02_meta_data/…/VG250_KRS.shp` — district shapefile for spatial join.
 
 ## Data pipeline (GitHub Actions)
-- `.github/workflows/update_data.yml` — monthly (1st, 06:00 UTC), commits the
-  charging parquet + `_data_version.py`.
+- `.github/workflows/update_data_api.yml` — daily (07:20 UTC), official BNetzA
+  API, commits the charging parquet + `_data_version.py`.
+- `.github/workflows/update_data.yml` — monthly (5th, 06:00 UTC), XLSX fallback,
+  commits the same two files.
 - `.github/workflows/update_kba_data.yml` — yearly (May 1), commits the KBA parquet.
 - Data is committed **into the repo** (read directly by Streamlit Cloud). See the
   README note for the trade-off and possible bucket/DuckDB future steps.
