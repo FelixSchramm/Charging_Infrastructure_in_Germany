@@ -14,3 +14,6 @@ __pycache__/
 
 # OS
 .DS_Store
+
+# BNetzA API spec (privately sent, not cleared for redistribution)
+BNetzA_Liste der Ladesäulen*.yml
