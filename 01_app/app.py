@@ -17,7 +17,7 @@ configure_page()
 import streamlit as st
 
 from data_loading import load_all
-from filters import apply_filters, render_sidebar
+from filters import apply_filters, render_result_count, render_sidebar
 from sections import (
     render_analyses,
     render_data_table,
@@ -42,32 +42,40 @@ if df is not None:
     # Titel und Datenstand bleiben ueber den Tabs immer sichtbar.
     render_header(df, df_kba)
 
-    if not filters.bundeslaender or not filters.leistungstypen:
+    if not filters.leistungstypen:
         st.warning(
-            "Bitte wähle mindestens ein Bundesland und einen Leistungstyp in der "
-            "Seitenleiste aus, um die Auswertungen anzuzeigen."
+            "Bitte wähle mindestens einen Leistungstyp in der Seitenleiste aus, "
+            "um die Auswertungen anzuzeigen."
         )
     else:
         df_filtered = apply_filters(df, filters)
+        render_result_count(df, df_filtered)
 
-        st.markdown(_TAB_STYLE, unsafe_allow_html=True)
-        tab_ueberblick, tab_betreiber, tab_regional, tab_daten, tab_info = st.tabs(
-            [
-                "Überblick",
-                "Analysen",
-                "Landkreise",
-                "Daten",
-                "Hinweise",
-            ]
-        )
+        if df_filtered.empty:
+            st.warning(
+                "Für die aktuelle Filterauswahl gibt es keine Ladepunkte. "
+                "Bitte passe die Filter an – zum Beispiel Bundesland, Landkreis/Stadt "
+                "oder Betreiber, die nicht zusammenpassen."
+            )
+        else:
+            st.markdown(_TAB_STYLE, unsafe_allow_html=True)
+            tab_ueberblick, tab_betreiber, tab_regional, tab_daten, tab_info = st.tabs(
+                [
+                    "Überblick",
+                    "Analysen",
+                    "Landkreise",
+                    "Daten",
+                    "Hinweise",
+                ]
+            )
 
-        with tab_ueberblick:
-            render_kpis(df_filtered)
-        with tab_betreiber:
-            render_analyses(df_filtered)
-        with tab_regional:
-            render_map(df, gdf_districts, df_kba, filters)
-        with tab_daten:
-            render_data_table(df_filtered)
-        with tab_info:
-            render_info(df, df_kba)
+            with tab_ueberblick:
+                render_kpis(df_filtered)
+            with tab_betreiber:
+                render_analyses(df_filtered)
+            with tab_regional:
+                render_map(df, gdf_districts, df_kba, filters)
+            with tab_daten:
+                render_data_table(df_filtered)
+            with tab_info:
+                render_info(df, df_kba)

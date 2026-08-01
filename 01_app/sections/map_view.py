@@ -33,10 +33,7 @@ _TOOLTIP_STYLE = f"""
 def render_map(df: pd.DataFrame, gdf_districts, df_kba, f: Filters):
     """Zeichnet die Choropleth-Karte (gesamtdeutsch, alle Filter außer Bundesland)."""
     st.header("Regionale Analyse")
-    st.caption(
-        "Die Karte zeigt den gesamtdeutschen Bestand auf Kreisebene "
-        "(alle Filter außer Bundesland werden angewendet)."
-    )
+    st.caption("Bestand öffentlicher Ladepunkte je Kreis (gesamtdeutsch).")
 
     if gdf_districts is None:
         st.warning(
@@ -50,8 +47,11 @@ def render_map(df: pd.DataFrame, gdf_districts, df_kba, f: Filters):
     gdf_for_map = _build_map_geodata(df_for_map, gdf_districts, df_kba)
 
     m = folium.Map(
-        location=MAP_CENTER, tiles="CartoDB positron",
-        zoom_start=MAP_ZOOM, min_zoom=MAP_ZOOM, max_bounds=True,
+        location=MAP_CENTER,
+        tiles="CartoDB positron",
+        zoom_start=MAP_ZOOM,
+        min_zoom=MAP_ZOOM,
+        max_bounds=True,
     )
     m.fit_bounds(MAP_BOUNDS)
 
@@ -81,12 +81,28 @@ def render_map(df: pd.DataFrame, gdf_districts, df_kba, f: Filters):
 
     st_folium(m, use_container_width=True, height=600)
 
+    st.info(
+        "Der **Bundesland-Filter** wirkt auf dieser Karte nicht – sie zeigt immer "
+        "ganz Deutschland. Die übrigen Filter (Zeitraum, Leistungstyp, Landkreis, "
+        "Betreiber) werden dagegen angewendet.",
+        icon="ℹ️",
+    )
 
-def _build_map_geodata(df_for_map: pd.DataFrame, gdf_districts, df_kba) -> gpd.GeoDataFrame:
+
+def _build_map_geodata(
+    df_for_map: pd.DataFrame, gdf_districts, df_kba
+) -> gpd.GeoDataFrame:
     """Aggregiert Ladepunkte je Kreis und merged sie mit Geometrie + KBA-Bestand."""
     agg = (
-        df_for_map.groupby(["AGS", "Leistungskategorie"]).size().unstack(fill_value=0).rename(
-            columns={KAT_HPC: "HPC", KAT_SCHNELL: "Schnellladen", KAT_NORMAL: "Normalladen"}
+        df_for_map.groupby(["AGS", "Leistungskategorie"])
+        .size()
+        .unstack(fill_value=0)
+        .rename(
+            columns={
+                KAT_HPC: "HPC",
+                KAT_SCHNELL: "Schnellladen",
+                KAT_NORMAL: "Normalladen",
+            }
         )
     )
     for col_name in _LADE_COLS:
@@ -100,10 +116,14 @@ def _build_map_geodata(df_for_map: pd.DataFrame, gdf_districts, df_kba) -> gpd.G
         merged[col_name] = merged[col_name].fillna(0).astype(int)
 
     if df_kba is not None:
-        merged = merged.merge(df_kba[["AGS", "bev_bestand", "phev_bestand"]], on="AGS", how="left")
+        merged = merged.merge(
+            df_kba[["AGS", "bev_bestand", "phev_bestand"]], on="AGS", how="left"
+        )
         merged["bev_bestand"] = merged["bev_bestand"].fillna(0).astype(int)
         merged["phev_bestand"] = merged["phev_bestand"].fillna(0).astype(int)
-        merged["gewichteter_bestand"] = merged["bev_bestand"] + 0.5 * merged["phev_bestand"]
+        merged["gewichteter_bestand"] = (
+            merged["bev_bestand"] + 0.5 * merged["phev_bestand"]
+        )
         merged["lp_pro_ev"] = (
             merged["Gesamt"] / merged["gewichteter_bestand"].replace(0, float("nan"))
         ).round(4)
@@ -114,8 +134,18 @@ def _build_map_geodata(df_for_map: pd.DataFrame, gdf_districts, df_kba) -> gpd.G
         merged["lp_pro_ev"] = float("nan")
 
     return merged[
-        ["AGS", "GEN", "geometry", "Gesamt", "HPC", "Schnellladen", "Normalladen",
-         "bev_bestand", "phev_bestand", "lp_pro_ev"]
+        [
+            "AGS",
+            "GEN",
+            "geometry",
+            "Gesamt",
+            "HPC",
+            "Schnellladen",
+            "Normalladen",
+            "bev_bestand",
+            "phev_bestand",
+            "lp_pro_ev",
+        ]
     ]
 
 
@@ -126,26 +156,48 @@ def _choropleth_config(gdf_for_map: gpd.GeoDataFrame, use_ev_metric: bool):
         true_max = float(valid_vals.max()) if len(valid_vals) > 0 else 0.2
         bin_candidates = [0.01, 0.02, 0.05, 0.08, 0.12, 0.2, 0.35]
         bins = sorted(
-            set([0.0] + [b for b in bin_candidates if 0 < b < true_max] + [round(true_max * 1.001, 6)])
+            set(
+                [0.0]
+                + [b for b in bin_candidates if 0 < b < true_max]
+                + [round(true_max * 1.001, 6)]
+            )
         )
         if len(bins) < 4:
-            bins = [0.0, round(true_max / 3, 6), round(true_max * 2 / 3, 6), round(true_max * 1.001, 6)]
-        return "lp_pro_ev", "Ladepunkte je gewichtetem EV-Bestand (BEV=1, PHEV=0,5)", bins
+            bins = [
+                0.0,
+                round(true_max / 3, 6),
+                round(true_max * 2 / 3, 6),
+                round(true_max * 1.001, 6),
+            ]
+        return (
+            "lp_pro_ev",
+            "Ladepunkte je gewichtetem EV-Bestand (BEV=1, PHEV=0,5)",
+            bins,
+        )
 
     max_val = int(gdf_for_map["Gesamt"].max()) if len(gdf_for_map) > 0 else 0
-    bins = sorted(set([0] + [b for b in [100, 500, 1000, 2500] if 0 < b < max_val] + [max_val + 1]))
+    bins = sorted(
+        set(
+            [0] + [b for b in [100, 500, 1000, 2500] if 0 < b < max_val] + [max_val + 1]
+        )
+    )
     if len(bins) < 4:
         extras = [i for i in range(1, 10) if i not in bins][: 4 - len(bins)]
         bins = sorted(set(bins + extras))
     return "Gesamt", "Anzahl Ladepunkte pro Kreis", bins
 
 
-def _add_tooltip_layer(m: folium.Map, gdf_for_map: gpd.GeoDataFrame, use_ev_metric: bool):
+def _add_tooltip_layer(
+    m: folium.Map, gdf_for_map: gpd.GeoDataFrame, use_ev_metric: bool
+):
     """Legt eine transparente GeoJSON-Ebene mit Hover-Tooltip über die Karte."""
     fields = ["GEN", "Gesamt", "HPC", "Schnellladen", "Normalladen"]
     aliases = [
-        "Kreis:", "Ladepunkte gesamt:", "HPC (>= 150 kW):",
-        "Schnellladen (> 22 kW):", "Normalladen (<= 22 kW):",
+        "Kreis:",
+        "Ladepunkte gesamt:",
+        "HPC (>= 150 kW):",
+        "Schnellladen (> 22 kW):",
+        "Normalladen (<= 22 kW):",
     ]
     if use_ev_metric:
         fields += ["bev_bestand", "phev_bestand", "lp_pro_ev"]
@@ -153,8 +205,16 @@ def _add_tooltip_layer(m: folium.Map, gdf_for_map: gpd.GeoDataFrame, use_ev_metr
 
     folium.GeoJson(
         gdf_for_map,
-        style_function=lambda x: {"fillColor": "transparent", "color": "transparent", "weight": 0},
-        highlight_function=lambda x: {"weight": 2, "color": NOW_DUNKELBLAU, "fillOpacity": 0.1},
+        style_function=lambda x: {
+            "fillColor": "transparent",
+            "color": "transparent",
+            "weight": 0,
+        },
+        highlight_function=lambda x: {
+            "weight": 2,
+            "color": NOW_DUNKELBLAU,
+            "fillOpacity": 0.1,
+        },
         tooltip=folium.GeoJsonTooltip(
             fields=fields, aliases=aliases, sticky=True, style=_TOOLTIP_STYLE
         ),
