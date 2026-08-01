@@ -85,7 +85,7 @@ The workflow can also be triggered manually via **GitHub Actions → Run workflo
 > The reasoning, the alternatives considered (GitHub Releases, Git LFS, S3, GCS, Supabase,
 > B2, MotherDuck, Neon) and their free-tier conditions are documented in
 > [`04_documents/adr/0001-data-storage-and-query-layer.md`](04_documents/adr/0001-data-storage-and-query-layer.md).
-> The target design is in [`04_documents/architecture.md`](04_documents/architecture.md),
+> The target design is in [`ARCHITECTURE.md`](ARCHITECTURE.md),
 > the per-dataset rules in [`04_documents/data-model.md`](04_documents/data-model.md).
 >
 > **Not yet implemented.** Three things are being measured first — real API response size, the

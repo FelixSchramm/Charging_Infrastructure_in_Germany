@@ -1,8 +1,8 @@
 # Architecture
 
 Target state for the data pipeline and dashboard. See
-[ADR 0001](adr/0001-data-storage-and-query-layer.md) for why these choices were made,
-and [data-model.md](data-model.md) for the per-dataset schema and partitioning rules.
+[ADR 0001](04_documents/adr/0001-data-storage-and-query-layer.md) for why these choices were made,
+and [data-model.md](04_documents/data-model.md) for the per-dataset schema and partitioning rules.
 
 **Status: target state, not yet implemented.** The current pipeline still commits parquet
 files into the repository (see `README.md`).

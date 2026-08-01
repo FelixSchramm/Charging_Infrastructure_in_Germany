@@ -1,7 +1,7 @@
 # Architecture diagrams (Mermaid)
 
 Two diagrams at different levels of detail. Paste diagram 1 into `README.md`, diagram 2 into
-`04_documents/architecture.md` (replacing the ASCII block).
+`ARCHITECTURE.md` (replacing the ASCII block).
 
 GitHub renders these natively — no build step, no committed image. Preview them at
 <https://mermaid.live> before pushing.
@@ -16,7 +16,7 @@ Suggested intro line:
 
 > Data is ingested daily by GitHub Actions, stored as partitioned parquet on Cloudflare R2,
 > and served to the dashboard as pre-computed aggregates. Details:
-> [architecture](04_documents/architecture.md) · [ADR 0001](04_documents/adr/0001-data-storage-and-query-layer.md)
+> [architecture](ARCHITECTURE.md) · [ADR 0001](04_documents/adr/0001-data-storage-and-query-layer.md)
 
 ```mermaid
 flowchart LR
@@ -72,7 +72,7 @@ flowchart LR
 
 ## 2 — Detailed data flow
 
-For `04_documents/architecture.md`. Same system, one level deeper: shows write patterns and
+For `ARCHITECTURE.md`. Same system, one level deeper: shows write patterns and
 partition keys, which is where most of the actual design lives.
 
 ```mermaid
@@ -148,7 +148,7 @@ flowchart TB
 
 ## Notes
 
-- **Keep the ASCII version as a fallback** in `04_documents/architecture.md`, wrapped in a
+- **Keep the ASCII version as a fallback** in `ARCHITECTURE.md`, wrapped in a
   collapsed `<details>` block. Mermaid renders on github.com, but not in every Markdown viewer,
   and not in exports to Word or PDF.
 - **Add a text description** next to each diagram. Mermaid output is not accessible to screen
