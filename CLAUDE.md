@@ -71,7 +71,7 @@ uv run streamlit run 01_app/app.py
 
 ## Plans
 - Implementierungs-/Ausführpläne werden **immer** im Ordner `plans/` abgelegt.
-- `plans/` ist in `.gitignore` und wird **nicht** ins Repo committet (nur lokal).
+- `plans/` ist **nicht** in `.gitignore` und wird ins Repo committet (nicht nur lokal).
 - Dateiname-Format: `YYYY-MM-DD_name.md` (aktuelles Datum + kurzer Slug),
   z. B. `2026-06-25_api-anbindung.md`.
 
