@@ -24,7 +24,11 @@ uv run streamlit run 01_app/app.py
   analyses, map_view, info).
 - `01_app/_data_version.py` — `LAST_UPDATED` stamp; imported by the app so a
   data commit forces a Streamlit Cloud redeploy. Overwritten by the CI workflows.
-- `scripts/update_data.py` — downloads BNetzA xlsx, writes the parquet.
+- `scripts/update_data.py` — downloads BNetzA xlsx, writes the parquet. Shared
+  helpers (`add_ags`, `save_output`, paths) are imported by the script below.
+- `scripts/update_data_official.py` — alternative source: BNetzA's official daily
+  JSON API, same output schema. Not wired into a workflow yet (Issue #15).
+  Explained in `scripts/update_data_official.md`.
 - `scripts/update_kba_data.py` — updates the KBA EV-stock parquet.
 - `02_data/03_computed_data/combined_ladestation_ladepunkt.parquet` — main data (~7 MB).
 - `02_data/03_computed_data/kba_ev_bestand.parquet` — KBA EV stock.
