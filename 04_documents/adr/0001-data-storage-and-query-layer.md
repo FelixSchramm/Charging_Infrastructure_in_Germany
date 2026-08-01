@@ -4,6 +4,8 @@
 - **Date:** 2026-08-01
 - **Deciders:** @FelixSchramm
 - **Supersedes:** the "data is committed into the repo" note in `README.md`
+- **Implementation progress:** tracked in [architecture-status.md](../architecture-status.md) —
+  update it there when a step lands
 
 ## Context
 

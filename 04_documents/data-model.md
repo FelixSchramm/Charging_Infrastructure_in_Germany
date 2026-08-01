@@ -6,6 +6,10 @@ prevents the 5 GB session dataset from being rewritten every night.
 Fill in the `TODO` fields once the measurement run (`measure_sources.yml`) has produced real
 numbers.
 
+Rollout progress per dataset (raw/curated/serving) is tracked in
+[architecture-status.md](architecture-status.md), Phase 2 — update it there once a dataset's
+pipeline is live.
+
 ## Conventions
 
 - **Format:** parquet, ZSTD compression, dictionary encoding for low-cardinality strings.

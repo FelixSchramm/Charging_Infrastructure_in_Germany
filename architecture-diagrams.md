@@ -3,6 +3,9 @@
 Two diagrams at different levels of detail. Paste diagram 1 into `README.md`, diagram 2 into
 `ARCHITECTURE.md` (replacing the ASCII block).
 
+These diagrams show the target state. Rollout progress is tracked in
+[04_documents/architecture-status.md](04_documents/architecture-status.md).
+
 GitHub renders these natively — no build step, no committed image. Preview them at
 <https://mermaid.live> before pushing.
 

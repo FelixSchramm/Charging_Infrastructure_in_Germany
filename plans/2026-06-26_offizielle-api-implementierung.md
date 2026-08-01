@@ -1,5 +1,12 @@
 # Ausführplan: Offizielle BNetzA-Tages-API anbinden
 
+> **Bezug zur Zielarchitektur:** Dieser Plan schreibt aktuell noch in die bestehende
+> Parquet-in-Git-Pipeline, nicht nach R2 (siehe `ARCHITECTURE.md` / ADR 0001). Sobald dieser
+> Plan produktiv läuft, in
+> [`04_documents/architecture-status.md`](../04_documents/architecture-status.md), Phase 2,
+> Zeile `charging_points` eintragen — dort wird der Gesamtfortschritt der Architekturumsetzung
+> getrackt.
+
 > **Status (2026-08-01, aktualisiert):** Antwort von `ladesaeulenregister@bnetza.de`
 > ist da, inkl. OpenAPI-Spec (lokal, nicht committed — siehe
 > `.gitignore`-Eintrag "BNetzA_Liste der Ladesäulen*.yml"; Grund: privat

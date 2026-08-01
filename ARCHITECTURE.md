@@ -5,7 +5,9 @@ Target state for the data pipeline and dashboard. See
 and [data-model.md](04_documents/data-model.md) for the per-dataset schema and partitioning rules.
 
 **Status: target state, not yet implemented.** The current pipeline still commits parquet
-files into the repository (see `README.md`).
+files into the repository (see `README.md`). Rollout progress is tracked in
+[architecture-status.md](04_documents/architecture-status.md) — update it there when a step
+lands.
 
 ## Overview
 

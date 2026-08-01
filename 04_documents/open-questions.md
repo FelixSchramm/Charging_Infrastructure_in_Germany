@@ -3,6 +3,10 @@
 Blocking items for [ADR 0001](adr/0001-data-storage-and-query-layer.md). Each of these should
 also exist as a GitHub issue — the text below is ready to paste.
 
+Overall rollout progress (this list plus the implementation phases that follow it) is tracked in
+[architecture-status.md](architecture-status.md) — update the mirrored checkbox there when an
+OQ is resolved.
+
 ---
 
 ## OQ-1 — Measure the BNetzA REST API response
