@@ -130,6 +130,29 @@ def add_ags(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def save_output(df: pd.DataFrame, datenstand: str | None) -> None:
+    """Schreibt das Parquet nach OUT_PATH und den Datenstand nach VERSION_PATH.
+
+    Wird auch von update_data_official.py genutzt, damit beide Pipelines
+    identisch schreiben.
+
+    :param df: fertiger Ladepunkt-DataFrame
+    :param datenstand: Datum als "YYYY-MM-DD", oder None wenn nicht ermittelbar
+    """
+    OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(OUT_PATH, index=False)
+    print(f"Gespeichert: {OUT_PATH} ({OUT_PATH.stat().st_size / 1e6:.1f} MB)")
+    print(
+        f"Fertig: {len(df)} Ladepunkte aus {df['ladestation_id'].nunique()} Stationen"
+    )
+
+    if datenstand:
+        VERSION_PATH.write_text(f'LAST_UPDATED = "{datenstand}"\n')
+        print(f"Datenstand: {datenstand} -> {VERSION_PATH}")
+    else:
+        print("Warnung: kein Datenstand ermittelt, _data_version.py unverändert")
+
+
 def main():
     print("Suche aktuelle Download-URL...")
     url = get_xlsx_url()
@@ -146,16 +169,7 @@ def main():
     print("Räumliche Zuordnung AGS via Shapefile...")
     df = add_ags(df)
 
-    OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(OUT_PATH, index=False)
-    print(f"Gespeichert: {OUT_PATH} ({OUT_PATH.stat().st_size / 1e6:.1f} MB)")
-    print(f"Fertig: {len(df)} Ladepunkte aus {df['ladestation_id'].nunique()} Stationen")
-
-    if datenstand:
-        VERSION_PATH.write_text(f'LAST_UPDATED = "{datenstand}"\n')
-        print(f"Datenstand: {datenstand} -> {VERSION_PATH}")
-    else:
-        print("Warnung: kein Datenstand im Dateinamen gefunden, _data_version.py unverändert")
+    save_output(df, datenstand)
 
 
 if __name__ == "__main__":

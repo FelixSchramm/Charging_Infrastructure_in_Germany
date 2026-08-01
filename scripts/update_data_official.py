@@ -1,55 +1,14 @@
 """Fetch BNetzA's official daily charging-station export and rebuild the parquet.
 
-1. REST GET & idempotency
-   A GET request is defined by the HTTP spec to be "safe": it must not change any
-   state on the server. That is what makes this whole script, and the live probe
-   used to calibrate it (Step 0 of the implementation plan), harmless to re-run as
-   often as needed while developing or debugging -- there is no "used up" quota of
-   exports, no order being placed, no record being created. Every call just asks
-   "what does the current export look like" and gets the same answer back until
-   BNetzA publishes a new one. This is different from POST/PUT/DELETE, where
-   re-running a failed script blindly could duplicate or corrupt data server-side.
+Alternative to update_data.py, which parses the monthly XLSX register. Same
+output paths and schema, different source. See update_data_official.md next to
+this file for the design background, the full field mapping and the reasoning
+behind the thresholds below.
 
-2. The envelope/response-wrapper pattern
-   The API does not return a bare JSON array of stations. It wraps the payload in
-   an object alongside metadata: `{"documentDate": ..., "documentTime": ...,
-   "chargingStations": [...]}`. This is the "envelope" (or "response wrapper")
-   pattern: metadata that describes the payload -- here, when the snapshot was
-   generated -- travels with the payload instead of being inferred separately
-   (e.g. from an HTTP header or a separate request). It is common across many
-   public data APIs and worth recognizing by name, because it always means "unwrap
-   one level before you get to the records."
-
-3. Nested-to-tabular flattening (ETL)
-   The export is a tree: Station -> Evse -> Connector, one-to-many at each level.
-   The dashboard, however, needs a flat table with one row per connector (a
-   station can offer several plug types across several physical charge points).
-   Turning a tree into a flat table is a standard ETL step usually called
-   "flattening" or "normalization". `update_data.py`'s old `transform()` faced the
-   same underlying problem in a different shape: the XLSX had wide columns
-   `Steckertypen1..6` (one station row, up to six plug slots side by side) and
-   melted them into one row per plug. Here the shape is a nested tree instead of
-   wide columns, but the goal is identical: one row per connector.
-
-4. Defensive validation before persisting
-   External data can be malformed, truncated, or -- worse -- silently wrong (e.g.
-   a station count that has collapsed because of an upstream bug) without the HTTP
-   request itself failing. "Trust but verify" means the freshly fetched data is
-   checked against sanity thresholds and against the last known-good file before
-   it is allowed to replace that file. Crucially, this check must happen *before*
-   the write, not after: once `to_parquet()` has overwritten the old file, the
-   last known-good state is gone, and a subsequent check could only detect
-   corruption, not prevent it.
-
-5. No pagination here
-   The OpenAPI spec defines no offset/limit/cursor query parameters for this
-   endpoint, and the live probe in Step 0 confirmed it in practice: a single
-   request returned all 115,613 stations in one response. So this script does not
-   page through results. Worth re-checking if the dataset grows substantially in
-   the future -- APIs sometimes introduce pagination as a minor, non-breaking
-   change (e.g. an optional `page` parameter with a default that still returns
-   everything today), and a script written to assume "always exactly one request"
-   would then silently start missing data instead of failing loudly.
+The endpoint returns the complete dataset in a single response -- the OpenAPI
+spec defines no offset/limit/cursor parameters. Re-check if the dataset grows
+substantially: an added optional page parameter would make this script silently
+miss data instead of failing loudly.
 """
 
 import sys
@@ -58,7 +17,7 @@ import time
 import pandas as pd
 import requests
 
-from update_data import add_ags, OUT_PATH, SHAPEFILE, VERSION_PATH
+from update_data import add_ags, save_output, OUT_PATH, SHAPEFILE
 
 API_URL = "https://ladesaeulenregister.bnetza.de/els/service/public/v1/chargepoints"
 
@@ -77,9 +36,13 @@ RETRY_BACKOFF_SECONDS = 5  # linear backoff between attempts
 # a hard floor, independent of whatever the previous run's count happened to be
 # -- see PLAUSIBILITY_MIN_RATIO below for the relative check against that.
 MIN_RECORDS = 100_000
-PLAUSIBILITY_MIN_RATIO = (
-    0.9  # new station count must be >= 90% of the last known-good file's
-)
+
+# new station count must be >= 90% of the last known-good file's
+PLAUSIBILITY_MIN_RATIO = 0.9
+
+# a wrong date format would turn every value into NaT via errors="coerce" and
+# silently empty the dashboard's year dimension, so guard the share of NaT
+MAX_NAT_RATIO = 0.5
 
 REQUIRED_COLUMNS = [
     "ladestation_id",
@@ -125,24 +88,21 @@ def fetch_export() -> dict:
     :raises requests.HTTPError: on HTTP 500 after exhausting retries
     :raises requests.RequestException: on network failure after exhausting retries
     """
-    headers = {
-        "Accept": "application/json"
-    }  # content negotiation: spec also allows XML
+    # content negotiation: the spec also allows XML
+    headers = {"Accept": "application/json"}
     last_error: Exception | None = None
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             response = requests.get(API_URL, headers=headers, timeout=REQUEST_TIMEOUT)
             if response.status_code == 404:
-                # not transient -- retrying today will not make the export appear,
-                # so this raises immediately instead of going through the loop below
+                # ExportNotReadyError is a RuntimeError, so it passes the
+                # RequestException handler below untouched and aborts the loop
                 raise ExportNotReadyError(
                     "BNetzA hat den heutigen Export noch nicht bereitgestellt (HTTP 404)"
                 )
             response.raise_for_status()
             return response.json()
-        except ExportNotReadyError:
-            raise
         except requests.RequestException as exc:
             last_error = exc
             print(
@@ -173,6 +133,9 @@ def build_target(data: dict) -> pd.DataFrame:
     rows = []
     for station in stations:
         evses = station.get("evses", [])
+        # id, operator and coordinates are indexed directly rather than via .get():
+        # they are mandatory per spec and present in 100% of the live export, so a
+        # missing one means the payload changed and should fail loudly here
         base = {
             "ladestation_id": station["id"],
             "Betreiber": station["operator"]["companyName"],
@@ -186,6 +149,8 @@ def build_target(data: dict) -> pd.DataFrame:
             "Breitengrad": station["coordinates"]["latitude"],
             "Laengengrad": station["coordinates"]["longitude"],
             "Inbetriebnahmedatum": station.get("go_live_date"),
+            # kW, not W -- the app sums this into GW (kpis.py) and compares the
+            # connector value against HPC_THRESHOLD_KW, verified against live data
             "InstallierteLadeleistungNLL": station.get("max_electric_power_station"),
             "ArtLadeeinrichtung": station.get("type"),
             # an Evse ("Ladepunkt" per the spec) is the physical charge point; it can
@@ -234,20 +199,27 @@ def validate(df: pd.DataFrame, df_previous: pd.DataFrame | None) -> None:
     normal for no new station to have gone live since yesterday, so that signal
     alone is too noisy to justify aborting the run.
 
+    Missing columns need no check here: build_target() ends with
+    df[REQUIRED_COLUMNS], so a missing one already raises a KeyError there.
+
     :param df: output of build_target()
     :param df_previous: previously-saved parquet (read from OUT_PATH before it
         gets overwritten), or None if OUT_PATH doesn't exist yet
     :raises ValueError: on any hard-failure condition
     """
-    missing = [col for col in REQUIRED_COLUMNS if col not in df.columns]
-    if missing:
-        raise ValueError(f"Fehlende Pflichtspalten: {missing}")
-
     station_count = df["ladestation_id"].nunique()
     if station_count < MIN_RECORDS:
         raise ValueError(
             f"Nur {station_count} Stationen im Export, erwartet mindestens {MIN_RECORDS} "
             "-- moeglicherweise unvollstaendiger oder fehlerhafter Export"
+        )
+
+    nat_ratio = df["Inbetriebnahmedatum"].isna().mean()
+    if nat_ratio > MAX_NAT_RATIO:
+        raise ValueError(
+            f"{nat_ratio:.0%} der Inbetriebnahmedaten sind leer "
+            f"(erlaubt bis {MAX_NAT_RATIO:.0%}) -- vermutlich hat sich das "
+            "Datumsformat der API geaendert"
         )
 
     if df_previous is not None:
@@ -288,27 +260,19 @@ def main() -> None:
     df = build_target(data)
     print(f"  -> {len(df)} Ladepunkte aus {df['ladestation_id'].nunique()} Stationen")
 
-    # read the previous known-good file BEFORE it gets overwritten further down --
-    # reordering this after the to_parquet() write would silently defeat validate()'s
-    # comparison against the last known-good state
+    # must stay ahead of save_output() below -- afterwards the last known-good
+    # state is gone and validate() has nothing left to compare against
     df_previous = pd.read_parquet(OUT_PATH) if OUT_PATH.exists() else None
 
-    print("Validiere gegen Pflichtspalten und letzten bekannten Stand...")
+    print("Validiere gegen letzten bekannten Stand...")
     validate(df, df_previous)
 
     print(f"Raeumliche Zuordnung AGS via Shapefile ({SHAPEFILE})...")
     df = add_ags(df)
 
-    OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(OUT_PATH, index=False)
-    print(f"Gespeichert: {OUT_PATH} ({OUT_PATH.stat().st_size / 1e6:.1f} MB)")
-
-    # documentDate arrives as "dd.MM.yyyy"; VERSION_PATH expects "YYYY-MM-DD" --
-    # a single inline conversion, not worth its own function for one use site
+    # documentDate arrives as "dd.MM.yyyy", save_output expects "YYYY-MM-DD"
     day, month, year = data["documentDate"].split(".")
-    datenstand = f"{year}-{month}-{day}"
-    VERSION_PATH.write_text(f'LAST_UPDATED = "{datenstand}"\n')
-    print(f"Datenstand: {datenstand} -> {VERSION_PATH}")
+    save_output(df, f"{year}-{month}-{day}")
 
 
 if __name__ == "__main__":
