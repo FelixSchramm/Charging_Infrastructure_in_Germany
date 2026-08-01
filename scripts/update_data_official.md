@@ -390,10 +390,11 @@ Die Prüfungen sind bewusst **asymmetrisch**:
 Die Leitfrage bei jeder Prüfung: *Gibt es eine harmlose Erklärung für dieses
 Signal?* Wenn ja, ist es eine Warnung. Wenn nein, darf es abbrechen.
 
-### 4.4 Der NaT-Guard
+### 4.4 Der NaT-Guard und die Region-Spalten
 
 ```python
-MAX_NAT_RATIO = 0.5
+MAX_NAT_RATIO = 0.05
+MAX_MISSING_REGION_RATIO = 0.05
 ```
 
 `build_target()` parst das Datum mit
@@ -414,6 +415,31 @@ bekommt eine Prüfung, die anschlägt, wenn die Annahme kippt.
 Allgemein: `errors="coerce"` ist bequem und deshalb gefährlich. Wer Fehler zu
 `NaN`/`NaT` verwandelt, muss danach die Quote messen — sonst hat man
 Fehlerbehandlung nur simuliert.
+
+**Warum die Schwelle bei 5 % liegt und nicht bei 50 %.** Die erste Fassung
+erlaubte `MAX_NAT_RATIO = 0.5`. Das war zu großzügig gedacht — der Guard sollte
+nur den totalen Formatbruch abfangen, bei dem *jeder* Wert zu `NaT` wird.
+Übersehen wurde dabei die Gegenseite: `01_app/data_loading.py` wirft beim Laden
+jede Zeile weg, deren `Inbetriebnahmedatum`, `Bundesland` oder
+`KreisKreisfreieStadt` leer ist. Bei 50 % erlaubter `NaT`-Quote hätte ein
+**grüner** Lauf also das halbe Dashboard leeren können, ohne dass irgendwo ein
+Fehler auftaucht.
+
+Dieselbe Falle gilt für die beiden Regionsspalten, und dort ist sie
+wahrscheinlicher: `state` und `district_independent_city` sind optionale
+API-Felder, werden also mit `.get()` gelesen und dürfen legitim `None` sein.
+`add_ags()` füllt sie nicht auf — der Geo-Join setzt nur `ARS`.
+
+Die Schwelle ist an der bestehenden Quelle geeicht: im produktiven Parquet aus
+der XLSX-Pipeline sind alle drei Spalten zu **100 %** befüllt (204.078 Zeilen,
+kein einziger Verlust beim `dropna` der App). 5 % liegen damit weit außerhalb
+des Normalen und trotzdem nicht so knapp, dass einzelne Lücken Fehlalarm
+auslösen.
+
+> Das Muster dahinter: eine Prüfung in der Pipeline ist nur so gut, wie sie zu
+> dem passt, was der *Konsument* der Daten damit macht. Eine Schwelle, die
+> isoliert plausibel klingt, kann trotzdem falsch sein, wenn man die
+> Weiterverarbeitung nicht kennt.
 
 ---
 

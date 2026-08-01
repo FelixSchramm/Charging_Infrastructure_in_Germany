@@ -41,8 +41,20 @@ MIN_RECORDS = 100_000
 PLAUSIBILITY_MIN_RATIO = 0.9
 
 # a wrong date format would turn every value into NaT via errors="coerce" and
-# silently empty the dashboard's year dimension, so guard the share of NaT
-MAX_NAT_RATIO = 0.5
+# silently empty the dashboard's year dimension, so guard the share of NaT.
+# Tight rather than generous, because the app's load_data() drops every NaT row:
+# the old 0.5 would have let half the dashboard disappear on a green run. The
+# XLSX source fills this column for 100% of rows, so 5% is already far outside
+# normal and still catches the total format break it was written for.
+MAX_NAT_RATIO = 0.05
+
+# Same reasoning for the two region columns: load_data() drops rows with an empty
+# Bundesland or KreisKreisfreieStadt, and unlike the date these arrive from
+# optional API fields (state, district_independent_city) that may legitimately be
+# null -- which is exactly why a growing gap must fail loudly instead of quietly
+# shrinking every KPI, chart and map in the app.
+MAX_MISSING_REGION_RATIO = 0.05
+REGION_COLUMNS = ["Bundesland", "KreisKreisfreieStadt"]
 
 REQUIRED_COLUMNS = [
     "ladestation_id",
@@ -199,6 +211,11 @@ def validate(df: pd.DataFrame, df_previous: pd.DataFrame | None) -> None:
     normal for no new station to have gone live since yesterday, so that signal
     alone is too noisy to justify aborting the run.
 
+    The NaT and region checks share one purpose: the app drops rows with an empty
+    Inbetriebnahmedatum, Bundesland or KreisKreisfreieStadt, so gaps in those three
+    columns never surface as an error in the dashboard -- they just make data
+    vanish. Catching them here is the only place where they are still visible.
+
     Missing columns need no check here: build_target() ends with
     df[REQUIRED_COLUMNS], so a missing one already raises a KeyError there.
 
@@ -221,6 +238,15 @@ def validate(df: pd.DataFrame, df_previous: pd.DataFrame | None) -> None:
             f"(erlaubt bis {MAX_NAT_RATIO:.0%}) -- vermutlich hat sich das "
             "Datumsformat der API geaendert"
         )
+
+    for column in REGION_COLUMNS:
+        missing_ratio = df[column].isna().mean()
+        if missing_ratio > MAX_MISSING_REGION_RATIO:
+            raise ValueError(
+                f"{missing_ratio:.0%} der Zeilen haben kein {column} "
+                f"(erlaubt bis {MAX_MISSING_REGION_RATIO:.0%}) -- diese Zeilen wuerden "
+                "im Dashboard kommentarlos verschwinden"
+            )
 
     if df_previous is not None:
         previous_count = df_previous["ladestation_id"].nunique()
