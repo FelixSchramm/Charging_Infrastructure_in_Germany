@@ -1,0 +1,43 @@
+name: Tägliches Daten-Update (offizielle API)
+
+on:
+  schedule:
+    # Versetzt zum monatlichen XLSX-Job (0 6 5 * *): am 5. laufen beide Workflows,
+    # und beide committen dieselben zwei Dateien — der Abstand verhindert, dass sie
+    # sich beim pull --rebase/push in die Quere kommen. Nicht zur vollen Stunde,
+    # weil GitHub die Cron-Ausführung dort stärker verzögert.
+    - cron: '20 7 * * *'    # täglich 07:20 UTC
+  workflow_dispatch:        # manuell auslösbar über GitHub UI
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.12'
+
+      - name: Dependencies installieren
+        run: uv sync
+
+      # Kein Token/Secret: der Endpunkt braucht laut Spec und Live-Test keine Auth.
+      # Der Lauf schlägt fehl, wenn die BNetzA den Export des Tages noch nicht
+      # bereitgestellt hat (HTTP 404 -> Exit-Code 1). Das ist gewollt: kein Erfolg,
+      # kein Commit — der letzte gute Stand bleibt unangetastet.
+      - name: Daten aktualisieren
+        run: uv run python scripts/update_data_official.py
+
+      - name: Änderungen committen
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add 02_data/03_computed_data/combined_ladestation_ladepunkt.parquet 01_app/_data_version.py
+          DATENSTAND=$(grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' 01_app/_data_version.py || date +%Y-%m-%d)
+          git diff --staged --quiet || git commit -m "chore: Daten-Update (API) Datenstand $DATENSTAND"
+          git pull --rebase origin main
+          git push
