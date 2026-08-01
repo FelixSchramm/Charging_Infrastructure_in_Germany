@@ -67,12 +67,31 @@ The pipeline ([`.github/workflows/update_data.yml`](.github/workflows/update_dat
 
 The workflow can also be triggered manually via **GitHub Actions → Run workflow**.
 
-> **Note — data is committed into the repo (tech-debt to revisit).**
-> The pipeline commits the resulting `.parquet` files (~7 MB charging data, ~14 KB KBA data) directly into Git and pushes them. This is intentional and pragmatic for now: the files are small, updates are infrequent (monthly/yearly), and Streamlit Community Cloud reads them straight from the repo checkout — no external storage, secrets, or cost.
+## Where the data lives
+
+> **In transition.** The pipeline currently commits the resulting `.parquet` files directly
+> into Git, which was a reasonable choice while updates were monthly and files were ~7 MB.
+> With the move to a daily BNetzA REST API and additional datasets — including charging
+> sessions in the multi-gigabyte range — that no longer holds: parquet does not delta-compress,
+> so daily commits would add several GB of Git history per year, and a 5 GB dataset cannot be
+> committed at all (GitHub blocks files over 100 MB).
 >
-> The trade-off is that every monthly version stays in the Git history forever, so the repo (and every clone/CI run) grows over time. It's not a problem at the current size, but if the data grows larger or the history gets heavy, move the data out of Git. Best effort/value for this setup: **GitHub Releases** (app loads the `.parquet` via URL) or **Git LFS**; for larger/more frequent data, an external bucket (S3/R2/Supabase Storage) loaded at runtime.
+> The target architecture moves the data to **Cloudflare R2**, with a layered model
+> (`raw/` → `curated/` → `serving/`), pre-computed aggregates for the dashboard, and DuckDB
+> over HTTP range requests for drill-down. A small `02_data/manifest.json` stays in Git as the
+> control plane: it triggers the Streamlit redeploy, serves as the cache key, and keeps the
+> scheduled workflow from being auto-disabled after 60 days of no commits.
 >
-> **Possible future step — DuckDB on a bucket.** Once the data lives in a bucket, [DuckDB](https://duckdb.org/) (free, open-source, runs in-process — no server or account) can query the remote `.parquet` directly via SQL without downloading the whole file, e.g. `SELECT Bundesland, COUNT(*) FROM 'https://bucket/…​.parquet' GROUP BY Bundesland`. It can also `JOIN` the BNetzA and KBA files in one query. Overkill at the current ~7 MB (pandas is fine), but a clean, serverless, zero-cost upgrade if the data is moved out of Git. The hosted variant **MotherDuck** has a free tier but adds an account/token — not needed for this project's size.
+> The reasoning, the alternatives considered (GitHub Releases, Git LFS, S3, GCS, Supabase,
+> B2, MotherDuck, Neon) and their free-tier conditions are documented in
+> [`04_documents/adr/0001-data-storage-and-query-layer.md`](04_documents/adr/0001-data-storage-and-query-layer.md).
+> The target design is in [`04_documents/architecture.md`](04_documents/architecture.md),
+> the per-dataset rules in [`04_documents/data-model.md`](04_documents/data-model.md).
+>
+> **Not yet implemented.** Three things are being measured first — real API response size, the
+> retention question on the session data, and DuckDB/R2 compatibility — see
+> [`04_documents/open-questions.md`](04_documents/open-questions.md). Until then the pipeline
+> keeps working as described above.
 
 ## How to Run the Project
 
